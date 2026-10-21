@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Room as LKRoom, RoomEvent, Track, type RemoteTrack } from 'livekit-client';
+import type { Room as LKRoom, RemoteTrack, Track } from 'livekit-client';
 import { FACE_TOPIC, type ForeheadPose } from '../../shared/protocol.ts';
 import { FaceTracker } from './face.ts';
 import { poses } from './poses.ts';
@@ -9,6 +9,14 @@ export interface VideoSource {
   attach(el: HTMLVideoElement): void;
   detach(el: HTMLVideoElement): void;
   key: string;
+}
+
+/** Choices made on the pre-join screen. */
+export interface MediaPrefs {
+  camOn: boolean;
+  micOn: boolean;
+  videoDeviceId?: string;
+  audioDeviceId?: string;
 }
 
 export interface Media {
@@ -22,10 +30,14 @@ export interface Media {
   toggleCam(): void;
   audioBlocked: boolean;
   startAudio(): void;
+  videoDeviceId: string | undefined;
+  audioDeviceId: string | undefined;
+  setDevice(kind: 'videoinput' | 'audioinput', deviceId: string): void;
   error: string | null;
 }
 
 const POSE_SEND_INTERVAL_MS = 80;
+const CAMERA = 'camera' as Track.Source; // Track.Source.Camera, without importing LiveKit eagerly
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
@@ -49,14 +61,17 @@ function wrapLiveKit(track: { attach(el: HTMLMediaElement): HTMLMediaElement; de
   };
 }
 
-export function useMedia(playerId: string | null, livekit: { url: string; token: string } | null): Media {
+export function useMedia(playerId: string | null, livekit: { url: string; token: string } | null, prefs: MediaPrefs): Media {
   const [, setVersion] = useState(0);
   const bump = useCallback(() => setVersion((v) => v + 1), []);
   const roomRef = useRef<LKRoom | null>(null);
   const localTrackRef = useRef<MediaStreamTrack | null>(null);
   const [localOnlyStream, setLocalOnlyStream] = useState<MediaStream | null>(null);
-  const [micOn, setMicOn] = useState(true);
-  const [camOn, setCamOn] = useState(true);
+  const [micOn, setMicOn] = useState(prefs.micOn);
+  const [camOn, setCamOn] = useState(prefs.camOn);
+  const [videoDeviceId, setVideoDeviceId] = useState(prefs.videoDeviceId);
+  const [audioDeviceId, setAudioDeviceId] = useState(prefs.audioDeviceId);
+  const prefsRef = useRef(prefs);
   const [error, setError] = useState<string | null>(null);
   const [audioBlocked, setAudioBlocked] = useState(false);
   const [speaking, setSpeaking] = useState<Set<string>>(new Set());
@@ -65,68 +80,81 @@ export function useMedia(playerId: string | null, livekit: { url: string; token:
   // ---- LiveKit mode ----
   useEffect(() => {
     if (!playerId || !livekit) return;
-    const room = new LKRoom({ adaptiveStream: true, dynacast: true });
-    roomRef.current = room;
-    const host = document.createElement('div');
-    host.style.display = 'none';
-    document.body.appendChild(host);
-    audioHost.current = host;
+    const initial = prefsRef.current;
+    let cancelled = false;
+    let room: LKRoom | null = null;
+    let host: HTMLDivElement | null = null;
 
-    const onSubscribed = (track: RemoteTrack) => {
-      if (track.kind === Track.Kind.Audio) host.appendChild(track.attach());
-      bump();
-    };
-    const onUnsubscribed = (track: RemoteTrack) => {
-      track.detach().forEach((el) => el.remove());
-      bump();
-    };
-    room
-      .on(RoomEvent.TrackSubscribed, onSubscribed)
-      .on(RoomEvent.TrackUnsubscribed, onUnsubscribed)
-      .on(RoomEvent.TrackMuted, bump)
-      .on(RoomEvent.TrackUnmuted, bump)
-      .on(RoomEvent.LocalTrackPublished, bump)
-      .on(RoomEvent.LocalTrackUnpublished, bump)
-      .on(RoomEvent.ParticipantDisconnected, (p) => {
-        poses.clear(p.identity);
+    // LiveKit is loaded on demand so the home page stays light.
+    const start = async () => {
+      const { Room, RoomEvent } = await import('livekit-client');
+      if (cancelled) return;
+      const lk = new Room({
+        adaptiveStream: true,
+        dynacast: true,
+        videoCaptureDefaults: { deviceId: initial.videoDeviceId, resolution: { width: 640, height: 480, frameRate: 24 } },
+        audioCaptureDefaults: { deviceId: initial.audioDeviceId, echoCancellation: true, noiseSuppression: true },
+      });
+      room = lk;
+      roomRef.current = lk;
+      const audioEls = document.createElement('div');
+      audioEls.style.display = 'none';
+      document.body.appendChild(audioEls);
+      host = audioEls;
+      audioHost.current = audioEls;
+
+      lk.on(RoomEvent.TrackSubscribed, (track: RemoteTrack) => {
+        if (track.kind === 'audio') audioEls.appendChild(track.attach());
         bump();
       })
-      .on(RoomEvent.ActiveSpeakersChanged, (speakers) => setSpeaking(new Set(speakers.map((s) => s.identity))))
-      .on(RoomEvent.AudioPlaybackStatusChanged, () => setAudioBlocked(!room.canPlaybackAudio))
-      .on(RoomEvent.DataReceived, (payload, participant, _kind, topic) => {
-        if (topic !== FACE_TOPIC || !participant) return;
-        try {
-          poses.set(participant.identity, JSON.parse(decoder.decode(payload)) as ForeheadPose | null);
-        } catch {}
-      });
-
-    (async () => {
-      try {
-        await room.connect(livekit.url, livekit.token);
-        setAudioBlocked(!room.canPlaybackAudio);
-        await room.localParticipant.enableCameraAndMicrophone().catch((err) => {
-          setError(`Camera/mic unavailable: ${err?.message ?? err}`);
+        .on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack) => {
+          track.detach().forEach((el) => el.remove());
+          bump();
+        })
+        .on(RoomEvent.TrackMuted, bump)
+        .on(RoomEvent.TrackUnmuted, bump)
+        .on(RoomEvent.LocalTrackPublished, bump)
+        .on(RoomEvent.LocalTrackUnpublished, bump)
+        .on(RoomEvent.ParticipantDisconnected, (p) => {
+          poses.clear(p.identity);
+          bump();
+        })
+        .on(RoomEvent.ActiveSpeakersChanged, (speakers) => setSpeaking(new Set(speakers.map((s) => s.identity))))
+        .on(RoomEvent.AudioPlaybackStatusChanged, () => setAudioBlocked(!lk.canPlaybackAudio))
+        .on(RoomEvent.DataReceived, (payload, participant, _kind, topic) => {
+          if (topic !== FACE_TOPIC || !participant) return;
+          try {
+            poses.set(participant.identity, JSON.parse(decoder.decode(payload)) as ForeheadPose | null);
+          } catch {}
         });
-        bump();
-      } catch (err) {
-        setError(`Couldn't connect to the video server: ${(err as Error)?.message ?? err}`);
-      }
-    })();
+
+      await lk.connect(livekit.url, livekit.token);
+      setAudioBlocked(!lk.canPlaybackAudio);
+      await Promise.all([
+        lk.localParticipant.setCameraEnabled(initial.camOn),
+        lk.localParticipant.setMicrophoneEnabled(initial.micOn),
+      ]).catch((err) => setError(`Camera/mic unavailable: ${err?.message ?? err}`));
+      bump();
+    };
+    start().catch((err) => {
+      if (!cancelled) setError(`Couldn't connect to the video server: ${(err as Error)?.message ?? err}`);
+    });
 
     return () => {
-      void room.disconnect();
-      host.remove();
+      cancelled = true;
+      void room?.disconnect();
+      host?.remove();
       roomRef.current = null;
     };
   }, [playerId, livekit, bump]);
 
   // ---- local-only mode: no video server, but still show your own camera and tracking ----
   useEffect(() => {
-    if (!playerId || livekit) return;
+    if (!playerId || livekit || !camOn) return;
     let stream: MediaStream | null = null;
     let cancelled = false;
     navigator.mediaDevices
-      ?.getUserMedia({ video: { width: 640, height: 480 }, audio: false })
+      ?.getUserMedia({ video: { width: 640, height: 480, deviceId: videoDeviceId ? { exact: videoDeviceId } : undefined }, audio: false })
       .then((s) => {
         if (cancelled) return s.getTracks().forEach((t) => t.stop());
         stream = s;
@@ -138,7 +166,7 @@ export function useMedia(playerId: string | null, livekit: { url: string; token:
       stream?.getTracks().forEach((t) => t.stop());
       setLocalOnlyStream(null);
     };
-  }, [playerId, livekit]);
+  }, [playerId, livekit, videoDeviceId, camOn]);
 
   // ---- resolve current tracks ----
   const room = roomRef.current;
@@ -147,16 +175,16 @@ export function useMedia(playerId: string | null, livekit: { url: string; token:
   const remote: Record<string, VideoSource> = {};
 
   if (room) {
-    const pub = room.localParticipant.getTrackPublication(Track.Source.Camera);
+    const pub = room.localParticipant.getTrackPublication(CAMERA);
     if (pub?.videoTrack && !pub.isMuted) {
       local = wrapLiveKit(pub.videoTrack);
       localTrack = pub.videoTrack.mediaStreamTrack;
     }
     for (const p of room.remoteParticipants.values()) {
-      const rpub = p.getTrackPublication(Track.Source.Camera);
+      const rpub = p.getTrackPublication(CAMERA);
       if (rpub?.videoTrack && rpub.isSubscribed && !rpub.isMuted) remote[p.identity] = wrapLiveKit(rpub.videoTrack);
     }
-  } else if (localOnlyStream && camOn) {
+  } else if (localOnlyStream) {
     localTrack = localOnlyStream.getVideoTracks()[0] ?? null;
     if (localTrack) local = wrapTrack(localTrack);
   }
@@ -202,6 +230,16 @@ export function useMedia(playerId: string | null, livekit: { url: string; token:
     });
   }, [bump]);
 
+  const setDevice = useCallback(
+    (kind: 'videoinput' | 'audioinput', deviceId: string) => {
+      if (kind === 'videoinput') setVideoDeviceId(deviceId);
+      else setAudioDeviceId(deviceId);
+      const lk = roomRef.current;
+      if (lk) void lk.switchActiveDevice(kind, deviceId).then(bump, (err) => setError(`Couldn't switch device: ${err?.message ?? err}`));
+    },
+    [bump],
+  );
+
   const startAudio = useCallback(() => {
     void roomRef.current?.startAudio().then(() => setAudioBlocked(false));
   }, []);
@@ -217,6 +255,9 @@ export function useMedia(playerId: string | null, livekit: { url: string; token:
     toggleCam,
     audioBlocked,
     startAudio,
+    videoDeviceId,
+    audioDeviceId,
+    setDevice,
     error,
   };
 }

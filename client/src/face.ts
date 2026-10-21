@@ -1,4 +1,4 @@
-import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
+import type { FaceLandmarker } from '@mediapipe/tasks-vision';
 import type { ForeheadPose } from '../../shared/protocol.ts';
 
 const WASM_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.1.1/wasm';
@@ -16,6 +16,8 @@ let landmarkerPromise: Promise<FaceLandmarker> | null = null;
 
 function loadLandmarker() {
   landmarkerPromise ??= (async () => {
+    // Loaded on demand: MediaPipe is the biggest dependency and only needed once a camera is on.
+    const { FaceLandmarker, FilesetResolver } = await import('@mediapipe/tasks-vision');
     const fileset = await FilesetResolver.forVisionTasks(WASM_URL);
     const create = (delegate: 'GPU' | 'CPU') =>
       FaceLandmarker.createFromOptions(fileset, {

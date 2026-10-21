@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Card, ClientMessage, RoomView, ServerMessage } from '../../shared/protocol.ts';
+import type { Card, ClientMessage, Reaction, RoomView, ServerMessage } from '../../shared/protocol.ts';
+
+export interface ReactionBubble {
+  id: number;
+  playerId: string;
+  reaction: Reaction;
+}
+
+const REACTION_SHOW_MS = 2600;
+let nextReactionId = 1;
 
 export interface GameState {
   status: 'connecting' | 'connected' | 'reconnecting' | 'closed';
@@ -10,6 +19,7 @@ export interface GameState {
   fatalError: string | null;
   toast: string | null;
   serverOffset: number; // serverNow - Date.now()
+  reactions: ReactionBubble[];
 }
 
 const tokenKey = (code: string) => `headsup:token:${code}`;
@@ -24,6 +34,7 @@ export function useGame(code: string, name: string) {
     fatalError: null,
     toast: null,
     serverOffset: 0,
+    reactions: [],
   });
   const socketRef = useRef<WebSocket | null>(null);
 
@@ -67,6 +78,12 @@ export function useGame(code: string, name: string) {
           case 'cards':
             setState((s) => ({ ...s, cards: msg.cards }));
             break;
+          case 'reaction': {
+            const bubble = { id: nextReactionId++, playerId: msg.playerId, reaction: msg.reaction };
+            setState((s) => ({ ...s, reactions: [...s.reactions.slice(-11), bubble] }));
+            setTimeout(() => setState((s) => ({ ...s, reactions: s.reactions.filter((r) => r.id !== bubble.id) })), REACTION_SHOW_MS);
+            break;
+          }
           case 'error':
             if (msg.fatal) {
               closed = true;

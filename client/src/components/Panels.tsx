@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MIN_PLAYERS, type Card, type ClientMessage, type PlayerView, type RoomView } from '../../../shared/protocol.ts';
 import { CardPicker } from './CardPicker.tsx';
 import { CardFace } from './CardFace.tsx';
@@ -119,7 +119,7 @@ export function AssignPanel({ room, me, cards, send, showToast, serverOffset }: 
           key={me.assignedFor}
           forName={nameOf(room, me.assignedFor)}
           current={cards[me.assignedFor]?.pickedBy === me.id ? cards[me.assignedFor] : null}
-          onSubmit={(label, image) => send({ type: 'submit-card', label, image })}
+          onSubmit={(label, image, hint) => send({ type: 'submit-card', label, image, hint })}
           onError={showToast}
         />
       ) : (
@@ -197,6 +197,17 @@ export function PlayPanel({ room, me, send, serverOffset }: PanelProps) {
       </p>
 
       {me.inRound && me.solved === 'no' && (
+        <>
+          {me.hint && (
+            <div className="my-hint">
+              Hint for your card: <strong>{me.hint}</strong>
+            </div>
+          )}
+          <Notes storageKey={`headsup:notes:${room.code}:${room.round}`} />
+        </>
+      )}
+
+      {me.inRound && me.solved === 'no' && (
         <div className="row">
           {confirmGiveUp ? (
             <>
@@ -225,6 +236,30 @@ export function PlayPanel({ room, me, send, serverOffset }: PanelProps) {
   );
 }
 
+/** Private scratchpad for what you've learned about your own card. Never leaves your browser. */
+function Notes({ storageKey }: { storageKey: string }) {
+  const [text, setText] = useState(() => {
+    try {
+      return sessionStorage.getItem(storageKey) ?? '';
+    } catch {
+      return '';
+    }
+  });
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(storageKey, text);
+    } catch {}
+  }, [storageKey, text]);
+  return (
+    <label className="field notes">
+      <span>My notes (only you see these)</span>
+      <textarea rows={3} value={text} placeholder="e.g. not an animal · real person · on TV" onChange={(e) => setText(e.target.value)} />
+    </label>
+  );
+}
+
+const MEDALS = ['🥇', '🥈', '🥉'];
+
 export function ResultsPanel({ room, me, cards, send }: PanelProps) {
   const ranked = [...room.players].sort((a, b) => b.score - a.score);
   return (
@@ -251,8 +286,9 @@ export function ResultsPanel({ room, me, cards, send }: PanelProps) {
 
       <h3>Scoreboard</h3>
       <ol className="scores">
-        {ranked.map((p) => (
-          <li key={p.id}>
+        {ranked.map((p, i) => (
+          <li key={p.id} className={i === 0 && p.score > 0 ? 'winner' : ''}>
+            <span className="medal">{p.score > 0 ? MEDALS[i] ?? '' : ''}</span>
             <span className="dot" style={{ background: p.color }} />
             {p.name}
             <strong>{p.score}</strong>

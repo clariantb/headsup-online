@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { MAX_LABEL_LENGTH } from '../../../shared/protocol.ts';
+import { MAX_HINT_LENGTH, MAX_LABEL_LENGTH } from '../../../shared/protocol.ts';
 import { DECKS, randomDeckCard } from '../../../shared/decks.ts';
 import { imageFromClipboard, imageToDataUrl } from '../image.ts';
 import type { Card } from '../../../shared/protocol.ts';
@@ -8,13 +8,14 @@ import { CardFace } from './CardFace.tsx';
 interface Props {
   forName: string;
   current: Card | null; // what you already submitted, if anything
-  onSubmit(label: string, image: string | null): void;
+  onSubmit(label: string, image: string | null, hint: string): void;
   onError(message: string): void;
 }
 
 export function CardPicker({ forName, current, onSubmit, onError }: Props) {
   const [label, setLabel] = useState(current?.label ?? '');
   const [image, setImage] = useState<string | null>(current?.image ?? null);
+  const [hint, setHint] = useState(current?.hint ?? '');
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [deck, setDeck] = useState('Any');
@@ -47,8 +48,8 @@ export function CardPicker({ forName, current, onSubmit, onError }: Props) {
     return () => window.removeEventListener('paste', onPaste);
   });
 
-  const dirty = !current || current.label !== label.trim() || current.image !== image;
-  const preview: Card | null = label.trim() || image ? { label: label.trim() || '…', image, pickedBy: '' } : null;
+  const dirty = !current || current.label !== label.trim() || current.image !== image || current.hint !== hint.trim();
+  const preview: Card | null = label.trim() || image ? { label: label.trim() || '…', image, hint, pickedBy: '' } : null;
 
   return (
     <div className="picker">
@@ -107,6 +108,11 @@ export function CardPicker({ forName, current, onSubmit, onError }: Props) {
         />
       </label>
 
+      <label className="field">
+        <span>Category hint (optional — {forName} will see this)</span>
+        <input value={hint} maxLength={MAX_HINT_LENGTH} placeholder="e.g. Cartoon character" onChange={(e) => setHint(e.target.value)} />
+      </label>
+
       <div className="row">
         <select value={deck} onChange={(e) => setDeck(e.target.value)} aria-label="Deck">
           <option>Any</option>
@@ -117,7 +123,9 @@ export function CardPicker({ forName, current, onSubmit, onError }: Props) {
         <button
           className="btn btn--ghost"
           onClick={() => {
-            setLabel(randomDeckCard(deck === 'Any' ? undefined : deck));
+            const pick = randomDeckCard(deck === 'Any' ? undefined : deck);
+            setLabel(pick.label);
+            setHint(pick.hint);
             setImage(null);
           }}
         >
@@ -130,7 +138,7 @@ export function CardPicker({ forName, current, onSubmit, onError }: Props) {
         )}
       </div>
 
-      <button className="btn btn--primary btn--wide" disabled={!label.trim() || busy || !dirty} onClick={() => onSubmit(label, image)}>
+      <button className="btn btn--primary btn--wide" disabled={!label.trim() || busy || !dirty} onClick={() => onSubmit(label, image, hint)}>
         {current ? (dirty ? 'Update card' : 'Card locked in ✓') : 'Lock it in'}
       </button>
     </div>

@@ -30,8 +30,18 @@ export const DECKS: Record<string, string[]> = {
   ],
 };
 
-export function randomDeckCard(deck?: string): string {
+// Shown to the wearer as a category hint for deck cards.
+export const DECK_HINTS: Record<string, string> = {
+  Animals: 'Animal',
+  Characters: 'Fictional character',
+  Famous: 'Famous person or thing',
+  Food: 'Food',
+  Jobs: 'Job',
+};
+
+export function randomDeckCard(deck?: string): { label: string; hint: string } {
   const names = Object.keys(DECKS);
-  const cards = DECKS[deck && DECKS[deck] ? deck : names[Math.floor(Math.random() * names.length)]];
-  return cards[Math.floor(Math.random() * cards.length)];
+  const name = deck && DECKS[deck] ? deck : names[Math.floor(Math.random() * names.length)];
+  const cards = DECKS[name];
+  return { label: cards[Math.floor(Math.random() * cards.length)], hint: DECK_HINTS[name] ?? '' };
 }

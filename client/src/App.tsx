@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { RoomScreen } from './components/RoomScreen.tsx';
+import { PreJoin } from './components/PreJoin.tsx';
+import type { MediaPrefs } from './useMedia.ts';
 
 const NAME_KEY = 'headsup:name';
 
@@ -18,13 +20,14 @@ function loadName() {
 
 export function App() {
   const [code, setCode] = useState(codeFromPath);
-  const [joined, setJoined] = useState(false);
+  const [stage, setStage] = useState<'home' | 'prejoin' | 'room'>('home');
+  const [prefs, setPrefs] = useState<MediaPrefs>({ camOn: true, micOn: true });
   const [name, setName] = useState(loadName);
 
   useEffect(() => {
     const onPop = () => {
       setCode(codeFromPath());
-      setJoined(false);
+      setStage('home');
     };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
@@ -35,14 +38,21 @@ export function App() {
     setCode(next);
   };
 
-  if (code && joined) {
+  const leave = () => {
+    setStage('home');
+    go(null);
+  };
+
+  if (code && stage === 'room') return <RoomScreen code={code} name={name} prefs={prefs} onLeave={leave} />;
+  if (code && stage === 'prejoin') {
     return (
-      <RoomScreen
+      <PreJoin
         code={code}
-        name={name}
-        onLeave={() => {
-          setJoined(false);
-          go(null);
+        name={name.trim()}
+        onBack={() => setStage('home')}
+        onJoin={(p) => {
+          setPrefs(p);
+          setStage('room');
         }}
       />
     );
@@ -60,7 +70,7 @@ export function App() {
       }}
       onEnter={(c) => {
         if (c !== code) go(c);
-        setJoined(true);
+        setStage('prejoin');
       }}
     />
   );

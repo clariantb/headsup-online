@@ -1,26 +1,33 @@
-import { useEffect, useRef, type ReactNode } from 'react';
-import type { Card, PlayerView } from '../../../shared/protocol.ts';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { REACTIONS, type Card, type PlayerView } from '../../../shared/protocol.ts';
 import type { VideoSource } from '../useMedia.ts';
+import type { ReactionBubble } from '../useGame.ts';
 import { poses } from '../poses.ts';
 import { CardFace } from './CardFace.tsx';
+
+export type Overlay = { kind: 'card'; card: Card } | { kind: 'hidden'; hint: string | null } | null;
 
 interface Props {
   player: PlayerView;
   isSelf: boolean;
   video: VideoSource | null;
   /** What sits on this player's forehead: a card, the "?" (for yourself), or nothing. */
-  overlay: { kind: 'card'; card: Card } | { kind: 'hidden' } | null;
+  overlay: Overlay;
   isTurn: boolean;
   speaking: boolean;
+  reactions?: ReactionBubble[];
+  showTag?: boolean;
   children?: ReactNode; // per-tile actions
 }
 
 const SMOOTHING = 0.35; // 0..1 per frame; higher follows faster
+const FACE_LOST_MS = 2000;
 
-export function Tile({ player, isSelf, video, overlay, isTurn, speaking, children }: Props) {
+export function Tile({ player, isSelf, video, overlay, isTurn, speaking, reactions = [], showTag = true, children }: Props) {
   const tileRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  const [faceLost, setFaceLost] = useState(false);
 
   // Attach the video track.
   useEffect(() => {
@@ -78,12 +85,33 @@ export function Tile({ player, isSelf, video, overlay, isTurn, speaking, childre
     return () => cancelAnimationFrame(frame);
   }, [overlay?.kind, player.id, isSelf, !!video]);
 
+  // On your own tile, say so when tracking can't find your face.
+  useEffect(() => {
+    if (!isSelf || !video) {
+      setFaceLost(false);
+      return;
+    }
+    let lostSince: number | null = null;
+    const t = setInterval(() => {
+      if (poses.get(player.id)) {
+        lostSince = null;
+        setFaceLost(false);
+      } else {
+        lostSince ??= performance.now();
+        if (performance.now() - lostSince > FACE_LOST_MS) setFaceLost(true);
+      }
+    }, 400);
+    return () => clearInterval(t);
+  }, [isSelf, !!video, player.id]);
+
   const classes = ['tile', isTurn && 'tile--turn', speaking && 'tile--speaking', !player.connected && 'tile--away']
     .filter(Boolean)
     .join(' ');
+  // Remount the card when it changes so it plays the flip-in animation (e.g. your own card being revealed).
+  const overlayKey = overlay ? (overlay.kind === 'card' ? `c:${overlay.card.label}:${overlay.card.image?.length ?? 0}` : 'hidden') : '';
 
   return (
-    <div className={classes} ref={tileRef} style={{ '--player-color': player.color } as React.CSSProperties}>
+    <div className={classes} ref={tileRef} data-player={player.id} style={{ '--player-color': player.color } as React.CSSProperties}>
       {video ? (
         <video ref={videoRef} className={isSelf ? 'tile__video mirrored' : 'tile__video'} autoPlay playsInline muted />
       ) : (
@@ -94,21 +122,42 @@ export function Tile({ player, isSelf, video, overlay, isTurn, speaking, childre
 
       {overlay && (
         <div className="forehead" ref={cardRef}>
-          {overlay.kind === 'card' ? <CardFace card={overlay.card} /> : <div className="card card--hidden">?</div>}
+          <div className="forehead__inner" key={overlayKey}>
+            {overlay.kind === 'card' ? (
+              <CardFace card={overlay.card} />
+            ) : (
+              <div className="card card--hidden">
+                <span>?</span>
+                {overlay.hint && <small>{overlay.hint}</small>}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      <div className="tile__tag">
-        {player.isHost && <span title="Host">👑</span>}
-        <span className="tile__name">
-          {player.name}
-          {isSelf && ' (you)'}
-        </span>
-        <span className="tile__score">{player.score}</span>
+      <div className="tile__reactions" aria-live="polite">
+        {reactions.map((r) => (
+          <div key={r.id} className="bubble">
+            <span>{REACTIONS[r.reaction].emoji}</span> {REACTIONS[r.reaction].text}
+          </div>
+        ))}
       </div>
+
+      {showTag && (
+        <div className="tile__tag">
+          {player.isHost && <span title="Host">👑</span>}
+          <span className="tile__name">
+            {player.name}
+            {isSelf && ' (you)'}
+          </span>
+          <span className="tile__score">{player.score}</span>
+        </div>
+      )}
+      {isTurn && <div className="tile__badge tile__badge--turn">🎤 Asking</div>}
       {player.solved === 'guessed' && <div className="tile__badge tile__badge--ok">Got it! #{player.solvedRank}</div>}
       {player.solved === 'gave-up' && <div className="tile__badge">Gave up</div>}
       {!player.connected && <div className="tile__badge tile__badge--away">Reconnecting…</div>}
+      {faceLost && <div className="tile__hint">Can't see your face — card is pinned to the top</div>}
       {children && <div className="tile__actions">{children}</div>}
     </div>
   );

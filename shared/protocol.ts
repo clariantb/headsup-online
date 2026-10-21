@@ -6,6 +6,17 @@ export const MIN_PLAYERS = 2;
 export const MAX_PLAYERS = 6;
 export const MAX_IMAGE_BYTES = 400_000; // data URL length cap, after client-side resize
 export const MAX_LABEL_LENGTH = 60;
+export const MAX_HINT_LENGTH = 30;
+
+// Quick answers to the asker's yes/no question, shown as bubbles on the sender's tile.
+export const REACTIONS = {
+  yes: { emoji: '👍', text: 'Yes' },
+  no: { emoji: '👎', text: 'No' },
+  maybe: { emoji: '🤷', text: 'Sort of' },
+  close: { emoji: '🔥', text: 'So close!' },
+  laugh: { emoji: '😂', text: 'Haha' },
+} as const;
+export type Reaction = keyof typeof REACTIONS;
 
 export interface Settings {
   assignSeconds: number; // 0 = no timer
@@ -26,6 +37,7 @@ export interface PlayerView {
   solved: 'no' | 'guessed' | 'gave-up';
   solvedRank: number | null;
   gotItVotes: string[]; // ids of players who said this player guessed right
+  hint: string | null; // optional category of the card they wear; the wearer sees it too
 }
 
 export interface RoomView {
@@ -44,6 +56,7 @@ export interface RoomView {
 export interface Card {
   label: string;
   image: string | null; // data URL, held in server memory only
+  hint: string; // optional category ("Animal", "Movie character"); '' if none
   pickedBy: string;
 }
 
@@ -51,7 +64,8 @@ export type ClientMessage =
   | { type: 'join'; code: string; name: string; token?: string }
   | { type: 'settings'; settings: Partial<Settings> }
   | { type: 'start' }
-  | { type: 'submit-card'; label: string; image: string | null }
+  | { type: 'submit-card'; label: string; image: string | null; hint?: string }
+  | { type: 'react'; reaction: Reaction }
   | { type: 'end-turn' }
   | { type: 'skip-vote' }
   | { type: 'got-it'; playerId: string }
@@ -70,6 +84,7 @@ export type ServerMessage =
   | { type: 'state'; room: RoomView; serverNow: number }
   // Every card the recipient is allowed to see. Never includes their own unsolved card.
   | { type: 'cards'; cards: Record<string, Card> }
+  | { type: 'reaction'; playerId: string; reaction: Reaction }
   | { type: 'error'; message: string; fatal?: boolean };
 
 // Sent peer-to-peer over the LiveKit data channel by each player about their own face.

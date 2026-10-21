@@ -1,12 +1,14 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import type { WebSocket } from 'ws';
 import {
+  MAX_HINT_LENGTH,
   MAX_IMAGE_BYTES,
   MAX_LABEL_LENGTH,
   MAX_PLAYERS,
   MIN_PLAYERS,
   type Card,
   type ClientMessage,
+  REACTIONS,
   type Phase,
   type PlayerView,
   type RoomView,
@@ -18,6 +20,7 @@ import { randomDeckCard } from '../../shared/decks.ts';
 const COLORS = ['#ff6b6b', '#ffa94d', '#ffd43b', '#69db7c', '#4dabf7', '#b197fc', '#f783ac', '#63e6be'];
 const HOST_HANDOFF_MS = 20_000;
 const LOBBY_DROP_MS = 60_000;
+const REACTION_COOLDOWN_MS = 400;
 
 interface Player {
   id: string;
@@ -32,6 +35,7 @@ interface Player {
   solvedRank: number | null;
   gotItVotes: Set<string>;
   dropTimer: NodeJS.Timeout | null;
+  lastReactionAt: number;
 }
 
 export class Room {
@@ -89,6 +93,7 @@ export class Room {
       solvedRank: null,
       gotItVotes: new Set(),
       dropTimer: null,
+      lastReactionAt: 0,
     };
     this.players.set(player.id, player);
     this.order.push(player.id);
@@ -137,10 +142,19 @@ export class Room {
         if (image !== null && (typeof image !== 'string' || !/^data:image\/(png|jpeg|webp|gif);base64,/.test(image) || image.length > MAX_IMAGE_BYTES)) {
           return this.send(player, { type: 'error', message: 'That image is too big or not a supported format.' });
         }
-        this.cards.set(player.assignedFor, { label, image, pickedBy: player.id });
+        const hint = typeof msg.hint === 'string' ? msg.hint.trim().slice(0, MAX_HINT_LENGTH) : '';
+        this.cards.set(player.assignedFor, { label, image, hint, pickedBy: player.id });
         if (this.roundPlayers().every((p) => this.cards.has(p.id))) this.startPlay();
         else this.sendCards(player);
         break;
+      }
+      case 'react': {
+        const now = Date.now();
+        if (!(msg.reaction in REACTIONS) || now - player.lastReactionAt < REACTION_COOLDOWN_MS) return;
+        player.lastReactionAt = now;
+        const data = JSON.stringify({ type: 'reaction', playerId: player.id, reaction: msg.reaction } satisfies ServerMessage);
+        for (const p of this.players.values()) if (p.socket?.readyState === 1) p.socket.send(data);
+        return; // nothing in the room state changed
       }
       case 'end-turn': {
         if (this.phase === 'play' && this.turnPlayerId() === player.id) this.advanceTurn();
@@ -214,7 +228,7 @@ export class Room {
         for (const p of this.roundPlayers()) {
           if (!this.cards.has(p.id)) {
             const picker = this.roundPlayers().find((q) => q.assignedFor === p.id);
-            this.cards.set(p.id, { label: randomDeckCard(), image: null, pickedBy: picker?.id ?? '' });
+            this.cards.set(p.id, { ...randomDeckCard(), image: null, pickedBy: picker?.id ?? '' });
           }
         }
         this.startPlay();
@@ -392,6 +406,7 @@ export class Room {
           solved: p.solved,
           solvedRank: p.solvedRank,
           gotItVotes: [...p.gotItVotes],
+          hint: this.phase === 'play' || this.phase === 'results' ? this.cards.get(p.id)?.hint || null : null,
         };
         return pv;
       }),
