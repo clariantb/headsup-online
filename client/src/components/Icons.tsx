@@ -130,14 +130,14 @@ export const FlagIcon = (p: IconProps) => (
 export function Mark({ size = 28 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
-      <circle cx="16" cy="20" r="10.5" fill="var(--yellow)" stroke="var(--ink)" strokeWidth="2.2" />
-      <rect x="8.5" y="3" width="15" height="11" rx="2" fill="var(--card)" stroke="var(--ink)" strokeWidth="2.2" transform="rotate(-6 16 8.5)" />
+      <circle cx="16" cy="20" r="10.5" fill="var(--yellow)" stroke="var(--print-ink)" strokeWidth="2.2" />
+      <rect x="8.5" y="3" width="15" height="11" rx="2" fill="var(--print)" stroke="var(--print-ink)" strokeWidth="2.2" transform="rotate(-6 16 8.5)" />
       <text x="16" y="12.2" textAnchor="middle" fontSize="8.5" fontWeight="800" fill="var(--red)" fontFamily="var(--font-display)" transform="rotate(-6 16 8.5)">
         ?
       </text>
-      <circle cx="12.5" cy="21" r="1.2" fill="var(--ink)" />
-      <circle cx="19.5" cy="21" r="1.2" fill="var(--ink)" />
-      <path d="M12.5 25c2 1.6 5 1.6 7 0" fill="none" stroke="var(--ink)" strokeWidth="1.8" strokeLinecap="round" />
+      <circle cx="12.5" cy="21" r="1.2" fill="var(--print-ink)" />
+      <circle cx="19.5" cy="21" r="1.2" fill="var(--print-ink)" />
+      <path d="M12.5 25c2 1.6 5 1.6 7 0" fill="none" stroke="var(--print-ink)" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   );
 }

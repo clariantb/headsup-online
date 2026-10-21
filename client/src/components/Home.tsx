@@ -24,16 +24,16 @@ function FaceArt() {
     <div className="face-art" aria-hidden="true">
       <svg viewBox="0 0 200 190">
         <ellipse cx="100" cy="182" rx="62" ry="6" fill="rgba(23,20,15,0.12)" />
-        <circle cx="34" cy="118" r="13" fill="var(--yellow)" stroke="var(--ink)" strokeWidth="4" />
-        <circle cx="166" cy="118" r="13" fill="var(--yellow)" stroke="var(--ink)" strokeWidth="4" />
-        <circle cx="100" cy="112" r="68" fill="var(--yellow)" stroke="var(--ink)" strokeWidth="4" />
+        <circle cx="34" cy="118" r="13" fill="var(--yellow)" stroke="var(--print-ink)" strokeWidth="4" />
+        <circle cx="166" cy="118" r="13" fill="var(--yellow)" stroke="var(--print-ink)" strokeWidth="4" />
+        <circle cx="100" cy="112" r="68" fill="var(--yellow)" stroke="var(--print-ink)" strokeWidth="4" />
         {/* eyes looking up at the card they can't see */}
-        <ellipse cx="76" cy="118" rx="13" ry="15" fill="var(--card)" stroke="var(--ink)" strokeWidth="3.5" />
-        <ellipse cx="124" cy="118" rx="13" ry="15" fill="var(--card)" stroke="var(--ink)" strokeWidth="3.5" />
-        <circle cx="78" cy="110" r="5.5" fill="var(--ink)" />
-        <circle cx="126" cy="110" r="5.5" fill="var(--ink)" />
-        <path d="M60 96c6-6 14-8 22-6M118 90c8-2 16 0 22 6" fill="none" stroke="var(--ink)" strokeWidth="4" strokeLinecap="round" />
-        <ellipse cx="100" cy="152" rx="8" ry="9" fill="var(--ink)" />
+        <ellipse cx="76" cy="118" rx="13" ry="15" fill="var(--print)" stroke="var(--print-ink)" strokeWidth="3.5" />
+        <ellipse cx="124" cy="118" rx="13" ry="15" fill="var(--print)" stroke="var(--print-ink)" strokeWidth="3.5" />
+        <circle cx="78" cy="110" r="5.5" fill="var(--print-ink)" />
+        <circle cx="126" cy="110" r="5.5" fill="var(--print-ink)" />
+        <path d="M60 96c6-6 14-8 22-6M118 90c8-2 16 0 22 6" fill="none" stroke="var(--print-ink)" strokeWidth="4" strokeLinecap="round" />
+        <ellipse cx="100" cy="152" rx="8" ry="9" fill="var(--print-ink)" />
         <circle cx="58" cy="142" r="8" fill="var(--pink)" opacity="0.55" />
         <circle cx="142" cy="142" r="8" fill="var(--pink)" opacity="0.55" />
       </svg>
@@ -105,7 +105,7 @@ export function Home({
               <span className="hl">
                 Except you.
                 <svg viewBox="0 0 300 20" preserveAspectRatio="none">
-                  <path d="M4 14C60 4 120 18 180 9s90 2 116-2" fill="none" stroke="var(--ink)" strokeWidth="5" strokeLinecap="round" />
+                  <path d="M4 14C60 4 120 18 180 9s90 2 116-2" fill="none" stroke="var(--fg)" strokeWidth="5" strokeLinecap="round" />
                 </svg>
               </span>
             </h1>
