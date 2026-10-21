@@ -54,7 +54,7 @@ To play with friends over the internet, the page needs HTTPS (browsers only allo
    ```bash
    git clone https://github.com/clariantb/headsup-online.git && cd headsup-online
    cp .env.production.example .env
-   # edit .env: DOMAIN, ACME_EMAIL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET (32+ chars)
+   # edit .env: DOMAIN, LIVEKIT_API_KEY, LIVEKIT_API_SECRET (32+ chars)
    docker compose -f docker-compose.prod.yml up -d --build
    ```
 
