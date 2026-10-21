@@ -1,0 +1,10 @@
+# API keys come from the LIVEKIT_KEYS environment variable (see docker-compose.prod.yml).
+port: 7880
+bind_addresses:
+  - 0.0.0.0
+rtc:
+  tcp_port: 7881 # fallback when UDP is blocked
+  udp_port: 7882 # all media over one UDP port
+  use_external_ip: true # advertise the server's public IP to browsers
+logging:
+  level: info

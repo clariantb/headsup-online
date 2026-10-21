@@ -32,11 +32,39 @@ Or create a free project at https://cloud.livekit.io and put its URL, key and se
 
 To play with friends over the internet, the page needs HTTPS (browsers only allow camera access on HTTPS or localhost). A LiveKit Cloud project plus any Node host, or a tunnel such as `cloudflared` for a quick test, is enough.
 
-### Production
+### Production (Docker: game + LiveKit + Caddy on one domain)
 
-```bash
-npm run build && npm start   # the server also serves client/dist
-```
+`docker-compose.prod.yml` runs three containers:
+
+- **app:** the game server, which also serves the built client.
+- **livekit:** the video server.
+- **caddy:** automatic HTTPS. It sends `/rtc` and `/twirp` to LiveKit and everything else to the game, so the whole stack needs only one hostname (for example `guess.iant.my.id`).
+
+1. Use a host with a **public IPv4 address** and Docker installed.
+2. Add a DNS **A record** for the domain pointing at that IP, before the first start, so Caddy can get a certificate.
+3. Open these ports on the firewall:
+
+   | Port | Used by |
+   | --- | --- |
+   | `80/tcp`, `443/tcp`, `443/udp` | Caddy (HTTPS) |
+   | `7881/tcp`, `7882/udp` | LiveKit media. If these are blocked, calls connect but the video stays black. |
+
+4. On the server:
+
+   ```bash
+   git clone https://github.com/clariantb/headsup-online.git && cd headsup-online
+   cp .env.production.example .env
+   # edit .env: DOMAIN, ACME_EMAIL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET (32+ chars)
+   docker compose -f docker-compose.prod.yml up -d --build
+   ```
+
+5. To update later:
+
+   ```bash
+   git pull && docker compose -f docker-compose.prod.yml up -d --build
+   ```
+
+To run it without Docker: `npm run build && npm start`. The server also serves `client/dist`.
 
 ## How it works
 
