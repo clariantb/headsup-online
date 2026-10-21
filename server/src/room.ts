@@ -17,7 +17,8 @@ import {
 } from '../../shared/protocol.ts';
 import { randomDeckCard } from '../../shared/decks.ts';
 
-const COLORS = ['#ff6b6b', '#ffa94d', '#ffd43b', '#69db7c', '#4dabf7', '#b197fc', '#f783ac', '#63e6be'];
+// Print-style colours; all readable with black ink text on top.
+const COLORS = ['#f5b700', '#ff7a59', '#5b8def', '#3cc48a', '#b38cf5', '#f27aa6', '#ffa62b', '#2ec4c4'];
 const HOST_HANDOFF_MS = 20_000;
 const LOBBY_DROP_MS = 60_000;
 const REACTION_COOLDOWN_MS = 400;

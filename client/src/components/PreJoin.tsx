@@ -5,6 +5,8 @@ import { poses } from '../poses.ts';
 import type { MediaPrefs, VideoSource } from '../useMedia.ts';
 import { DevicePicker } from './DevicePicker.tsx';
 import { Tile } from './Tile.tsx';
+import { Brand } from './Home.tsx';
+import { ArrowIcon, BackIcon, CamIcon, CamOffIcon, MicIcon, MicOffIcon } from './Icons.tsx';
 
 const PREVIEW_ID = '__preview';
 const PREFS_KEY = 'headsup:devices';
@@ -105,7 +107,7 @@ export function PreJoin({ code, name, onJoin, onBack }: { code: string; name: st
   const previewPlayer: PlayerView = {
     id: PREVIEW_ID,
     name,
-    color: '#ffd43b',
+    color: '#f5b700',
     connected: true,
     isHost: false,
     score: 0,
@@ -128,41 +130,53 @@ export function PreJoin({ code, name, onJoin, onBack }: { code: string; name: st
   };
 
   return (
-    <div className="center-screen">
-      <div className="prejoin">
-        <div className="prejoin__preview">
-          <Tile player={previewPlayer} isSelf video={camOn ? video : null} overlay={{ kind: 'hidden', hint: null }} isTurn={false} speaking={false} showTag={false} />
-          <div className="prejoin__toggles">
-            <button className={`btn btn--icon ${micOn ? '' : 'btn--off'}`} onClick={() => setMicOn((v) => !v)} title="Microphone">
-              {micOn ? '🎙️' : '🔇'}
+    <div className="screen">
+      <header className="bar">
+        <Brand onClick={onBack} />
+        <span className="bar__spacer" />
+        <div className="ticket">
+          <span>Room</span>
+          <strong>{code}</strong>
+        </div>
+      </header>
+      <main className="screen__body">
+        <div className="prejoin">
+          <div className="prejoin__stage">
+            <Tile player={previewPlayer} isSelf video={camOn ? video : null} overlay={{ kind: 'hidden', hint: null }} isTurn={false} speaking={false} showTag={false} />
+            <div className="prejoin__toggles">
+              <button className={`icon-btn ${micOn ? '' : 'icon-btn--off'}`} onClick={() => setMicOn((v) => !v)} aria-label={micOn ? 'Mute microphone' : 'Unmute microphone'}>
+                {micOn ? <MicIcon /> : <MicOffIcon />}
+              </button>
+              <button className={`icon-btn ${camOn ? '' : 'icon-btn--off'}`} onClick={() => setCamOn((v) => !v)} aria-label={camOn ? 'Turn camera off' : 'Turn camera on'}>
+                {camOn ? <CamIcon /> : <CamOffIcon />}
+              </button>
+            </div>
+          </div>
+
+          <div className="sheet">
+            <h2>Ready, {name}?</h2>
+            <p className="muted">
+              That card back is where your card will sit. Move around a bit and check it follows your forehead.
+            </p>
+            {error && <p className="error small">{error}</p>}
+            <DevicePicker videoDeviceId={videoDeviceId} audioDeviceId={audioDeviceId} onChange={changeDevice} />
+            {audioTrack && (
+              <div className="meter" aria-label="Microphone level">
+                <span>Mic</span>
+                <div className="meter__track">
+                  <div ref={meterRef} className="meter__fill" />
+                </div>
+              </div>
+            )}
+            <button className="btn btn--primary btn--block" onClick={() => onJoin({ camOn: camOn && !error, micOn: micOn && !error, videoDeviceId, audioDeviceId })}>
+              {error ? 'Join without camera' : 'Join the game'} <ArrowIcon size={18} />
             </button>
-            <button className={`btn btn--icon ${camOn ? '' : 'btn--off'}`} onClick={() => setCamOn((v) => !v)} title="Camera">
-              {camOn ? '📷' : '🚫'}
+            <button className="link-btn" onClick={onBack}>
+              <BackIcon size={16} /> Back
             </button>
           </div>
         </div>
-
-        <div className="panel prejoin__side">
-          <h2>Ready, {name}?</h2>
-          <p className="muted">
-            Joining room <strong className="accent">{code}</strong>. Check the <strong>?</strong> sits on your forehead — that's
-            where your card will be.
-          </p>
-          {error && <p className="error">{error}</p>}
-          <DevicePicker videoDeviceId={videoDeviceId} audioDeviceId={audioDeviceId} onChange={changeDevice} />
-          {audioTrack && (
-            <div className="meter" aria-label="Microphone level">
-              <div ref={meterRef} />
-            </div>
-          )}
-          <button className="btn btn--primary btn--wide" onClick={() => onJoin({ camOn: camOn && !error, micOn: micOn && !error, videoDeviceId, audioDeviceId })}>
-            Join game
-          </button>
-          <button className="link" onClick={onBack}>
-            ← Back
-          </button>
-        </div>
-      </div>
+      </main>
     </div>
   );
 }

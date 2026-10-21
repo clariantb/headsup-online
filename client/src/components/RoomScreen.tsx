@@ -5,8 +5,10 @@ import { sfx } from '../sfx.ts';
 import { confetti, confettiAt } from '../confetti.ts';
 import { Tile, type Overlay } from './Tile.tsx';
 import { DevicePicker } from './DevicePicker.tsx';
+import { Brand } from './Home.tsx';
+import { CamIcon, CamOffIcon, CheckIcon, ExitIcon, GearIcon, MicIcon, MicOffIcon, SpeakerIcon } from './Icons.tsx';
 import { AssignPanel, LobbyPanel, PlayPanel, ResultsPanel } from './Panels.tsx';
-import { REACTIONS, type PlayerView, type Reaction, type RoomView } from '../../../shared/protocol.ts';
+import { REACTIONS, type Phase, type PlayerView, type Reaction, type RoomView } from '../../../shared/protocol.ts';
 
 const REACTION_KEYS: Record<string, Reaction> = { y: 'yes', n: 'no', s: 'maybe', c: 'close', h: 'laugh' };
 
@@ -42,22 +44,31 @@ export function RoomScreen({ code, name, prefs, onLeave }: { code: string; name:
 
   if (game.fatalError) {
     return (
-      <div className="center-screen">
-        <div className="panel narrow">
-          <h2>Can't join</h2>
-          <p>{game.fatalError}</p>
-          <button className="btn btn--primary" onClick={onLeave}>
-            Back home
-          </button>
-        </div>
+      <div className="screen">
+        <header className="bar">
+          <Brand onClick={onLeave} />
+        </header>
+        <main className="screen__body">
+          <div className="sheet" style={{ maxWidth: 420 }}>
+            <h2>Can't join this room</h2>
+            <p className="muted">{game.fatalError}</p>
+            <button className="btn btn--primary" onClick={onLeave} style={{ marginTop: '1rem' }}>
+              Back to the start
+            </button>
+          </div>
+        </main>
       </div>
     );
   }
   if (!room || !me) {
     return (
-      <div className="center-screen muted">
-        <div className="spinner" />
-        Joining room {code}…
+      <div className="screen">
+        <main className="screen__body">
+          <div className="loading">
+            <div className="spinner" />
+            Joining room {code}…
+          </div>
+        </main>
       </div>
     );
   }
@@ -74,29 +85,39 @@ export function RoomScreen({ code, name, prefs, onLeave }: { code: string; name:
   };
 
   return (
-    <div className="room">
-      <header className="room__bar">
-        <button className="link" onClick={onLeave}>
-          ← Leave
-        </button>
-        <span className="room__code">
-          Room <strong>{room.code}</strong>
-        </span>
-        <div className="room__controls">
+    <div className="screen">
+      <header className="bar">
+        <Brand onClick={onLeave} />
+        <div className="ticket" title="Room code">
+          <span>Room</span>
+          <strong>{room.code}</strong>
+        </div>
+        <span className="bar__spacer" />
+        <div className="bar__controls">
           {media.mode === 'livekit' && (
-            <button className={`btn btn--icon ${media.micOn ? '' : 'btn--off'}`} onClick={media.toggleMic} title={media.micOn ? 'Mute' : 'Unmute'}>
-              {media.micOn ? '🎙️' : '🔇'}
+            <button
+              className={`icon-btn ${media.micOn ? '' : 'icon-btn--off'}`}
+              onClick={media.toggleMic}
+              aria-label={media.micOn ? 'Mute' : 'Unmute'}
+              title={media.micOn ? 'Mute' : 'Unmute'}
+            >
+              {media.micOn ? <MicIcon /> : <MicOffIcon />}
             </button>
           )}
-          <button className={`btn btn--icon ${media.camOn ? '' : 'btn--off'}`} onClick={media.toggleCam} title={media.camOn ? 'Turn camera off' : 'Turn camera on'}>
-            {media.camOn ? '📷' : '🚫'}
+          <button
+            className={`icon-btn ${media.camOn ? '' : 'icon-btn--off'}`}
+            onClick={media.toggleCam}
+            aria-label={media.camOn ? 'Turn camera off' : 'Turn camera on'}
+            title={media.camOn ? 'Turn camera off' : 'Turn camera on'}
+          >
+            {media.camOn ? <CamIcon /> : <CamOffIcon />}
           </button>
           <div className="popover-anchor">
-            <button className="btn btn--icon" onClick={() => setSettingsOpen((v) => !v)} title="Settings" aria-expanded={settingsOpen}>
-              ⚙️
+            <button className="icon-btn" onClick={() => setSettingsOpen((v) => !v)} aria-label="Settings" title="Settings" aria-expanded={settingsOpen}>
+              <GearIcon />
             </button>
             {settingsOpen && (
-              <div className="popover" role="dialog">
+              <div className="popover sheet" role="dialog" aria-label="Settings">
                 <DevicePicker
                   videoDeviceId={media.videoDeviceId}
                   audioDeviceId={media.audioDeviceId}
@@ -114,23 +135,26 @@ export function RoomScreen({ code, name, prefs, onLeave }: { code: string; name:
                   />
                   Sound effects
                 </label>
-                <button className="btn btn--ghost btn--small" onClick={() => setSettingsOpen(false)}>
+                <button className="btn btn--sm" onClick={() => setSettingsOpen(false)}>
                   Done
                 </button>
               </div>
             )}
           </div>
+          <button className="icon-btn" onClick={onLeave} aria-label="Leave room" title="Leave room">
+            <ExitIcon />
+          </button>
         </div>
       </header>
 
-      {game.status === 'reconnecting' && <div className="banner">Connection lost — reconnecting…</div>}
+      {game.status === 'reconnecting' && <div className="banner banner--warn">Connection lost. Reconnecting…</div>}
       {media.mode === 'local-only' && (
-        <div className="banner banner--info">Video server not configured: only you can see your camera. Game still works.</div>
+        <div className="banner">No video server is set up, so only you can see your camera. The game itself works fine.</div>
       )}
-      {media.error && <div className="banner">{media.error}</div>}
+      {media.error && <div className="banner banner--warn">{media.error}</div>}
       {media.audioBlocked && (
         <button className="banner banner--action" onClick={media.startAudio}>
-          🔊 Click to enable sound
+          <SpeakerIcon /> Your browser paused the sound. Click to hear everyone.
         </button>
       )}
 
@@ -156,9 +180,8 @@ export function RoomScreen({ code, name, prefs, onLeave }: { code: string; name:
           {canReact && (
             <div className="reactbar" role="toolbar" aria-label="Quick answers">
               {(Object.keys(REACTIONS) as Reaction[]).map((r) => (
-                <button key={r} className="reactbar__btn" onClick={() => send({ type: 'react', reaction: r })} title={`${REACTIONS[r].text} (${keyFor(r).toUpperCase()})`}>
-                  <span>{REACTIONS[r].emoji}</span>
-                  <small>{REACTIONS[r].text}</small>
+                <button key={r} className={`reactbar__btn reactbar__btn--${r}`} onClick={() => send({ type: 'react', reaction: r })}>
+                  {REACTIONS[r].text} <kbd>{keyFor(r).toUpperCase()}</kbd>
                 </button>
               ))}
             </div>
@@ -166,15 +189,42 @@ export function RoomScreen({ code, name, prefs, onLeave }: { code: string; name:
         </div>
 
         <aside className="room__side">
-          {room.phase === 'lobby' && <LobbyPanel {...panelProps} />}
-          {room.phase === 'assign' && <AssignPanel {...panelProps} />}
-          {room.phase === 'play' && <PlayPanel {...panelProps} />}
-          {room.phase === 'results' && <ResultsPanel {...panelProps} />}
+          <div className="sheet">
+            <Steps phase={room.phase} />
+            {room.phase === 'lobby' && <LobbyPanel {...panelProps} />}
+            {room.phase === 'assign' && <AssignPanel {...panelProps} />}
+            {room.phase === 'play' && <PlayPanel {...panelProps} />}
+            {room.phase === 'results' && <ResultsPanel {...panelProps} />}
+          </div>
         </aside>
       </main>
 
-      {game.toast && <div className="toast">{game.toast}</div>}
+      {game.toast && (
+        <div className="toast" role="status">
+          {game.toast}
+        </div>
+      )}
     </div>
+  );
+}
+
+const PHASES: { id: Phase; label: string }[] = [
+  { id: 'lobby', label: 'Lobby' },
+  { id: 'assign', label: 'Pick' },
+  { id: 'play', label: 'Play' },
+  { id: 'results', label: 'Reveal' },
+];
+
+function Steps({ phase }: { phase: Phase }) {
+  const current = PHASES.findIndex((p) => p.id === phase);
+  return (
+    <ol className="steps" aria-label="Round progress">
+      {PHASES.map((p, i) => (
+        <li key={p.id} className={i === current ? 'is-current' : i < current ? 'is-done' : ''} aria-current={i === current ? 'step' : undefined}>
+          {p.label}
+        </li>
+      ))}
+    </ol>
   );
 }
 
@@ -224,8 +274,12 @@ function tileActions(room: RoomView, me: PlayerView, p: PlayerView, send: Return
   const needed = Math.max(1, Math.ceil(others / 2));
   const voted = p.gotItVotes.includes(me.id);
   return (
-    <button className={`btn btn--small ${voted ? 'btn--active' : 'btn--ok'}`} onClick={() => send({ type: 'got-it', playerId: p.id })}>
-      ✓ Got it {needed > 1 && `(${p.gotItVotes.length}/${needed})`}
+    <button
+      className={`btn btn--sm ${voted ? 'btn--selected' : 'btn--go'}`}
+      onClick={() => send({ type: 'got-it', playerId: p.id })}
+      title={`${p.name} said the right answer`}
+    >
+      <CheckIcon size={16} /> Got it{needed > 1 && ` ${p.gotItVotes.length}/${needed}`}
     </button>
   );
 }

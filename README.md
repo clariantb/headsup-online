@@ -9,6 +9,13 @@ A video-call party game for 2–6 friends. Everyone wears a card on their forehe
 3. **Guess:** when someone says their answer, the others tap **✓ Got it** on that player's tile (again a majority of the others). Points go 1st = N, 2nd = N−1, and so on. Whoever picked the card gets +1. You can also give up, which reveals your card and scores 0.
 4. **Results:** every card is revealed. The host starts the next round.
 
+Extras:
+- **Camera check:** before joining you see your camera, with the card back tracking your forehead, a mic level meter and camera/mic pickers.
+- **Quick answers:** Yes, No, Sort of, So close! and Haha buttons (keys Y, N, S, C and H) show as stamps on your video, so answers still get through on a noisy call.
+- **Hints:** the picker can add a category ("Fictional character") that the wearer sees on their card back. Deck cards fill this in automatically.
+- **Notes:** a private notepad for what you've worked out so far. It never leaves your browser.
+- **Feedback:** sound effects (you can turn them off in settings) and confetti when someone guesses.
+
 ## Running it
 
 ```bash

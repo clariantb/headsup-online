@@ -13,7 +13,7 @@ interface Piece {
   life: number;
 }
 
-const COLORS = ['#ffd43b', '#ff6b6b', '#69db7c', '#4dabf7', '#b197fc', '#f783ac', '#ffa94d'];
+const COLORS = ['#f5b700', '#e5402f', '#1e9e5a', '#2f5bea', '#f27aa6', '#17140f', '#fffdf8'];
 let canvas: HTMLCanvasElement | null = null;
 let pieces: Piece[] = [];
 let frame = 0;

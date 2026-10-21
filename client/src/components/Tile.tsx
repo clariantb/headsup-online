@@ -3,7 +3,8 @@ import { REACTIONS, type Card, type PlayerView } from '../../../shared/protocol.
 import type { VideoSource } from '../useMedia.ts';
 import type { ReactionBubble } from '../useGame.ts';
 import { poses } from '../poses.ts';
-import { CardFace } from './CardFace.tsx';
+import { CardBack, CardFace } from './CardFace.tsx';
+import { CrownIcon } from './Icons.tsx';
 
 export type Overlay = { kind: 'card'; card: Card } | { kind: 'hidden'; hint: string | null } | null;
 
@@ -123,40 +124,35 @@ export function Tile({ player, isSelf, video, overlay, isTurn, speaking, reactio
       {overlay && (
         <div className="forehead" ref={cardRef}>
           <div className="forehead__inner" key={overlayKey}>
-            {overlay.kind === 'card' ? (
-              <CardFace card={overlay.card} />
-            ) : (
-              <div className="card card--hidden">
-                <span>?</span>
-                {overlay.hint && <small>{overlay.hint}</small>}
-              </div>
-            )}
+            {overlay.kind === 'card' ? <CardFace card={overlay.card} /> : <CardBack hint={overlay.hint} />}
           </div>
         </div>
       )}
 
       <div className="tile__reactions" aria-live="polite">
         {reactions.map((r) => (
-          <div key={r.id} className="bubble">
-            <span>{REACTIONS[r.reaction].emoji}</span> {REACTIONS[r.reaction].text}
+          <div key={r.id} className={`stamp-pop stamp-pop--${r.reaction}`}>
+            {REACTIONS[r.reaction].text}
           </div>
         ))}
       </div>
 
       {showTag && (
-        <div className="tile__tag">
-          {player.isHost && <span title="Host">👑</span>}
-          <span className="tile__name">
+        <div className="tape">
+          {player.isHost && <CrownIcon size={14} aria-label="Host" />}
+          <span className="tape__name">
             {player.name}
-            {isSelf && ' (you)'}
+            {isSelf && <span className="tape__you"> · you</span>}
           </span>
-          <span className="tile__score">{player.score}</span>
+          <span className="tape__score" title="Score">
+            {player.score}
+          </span>
         </div>
       )}
-      {isTurn && <div className="tile__badge tile__badge--turn">🎤 Asking</div>}
-      {player.solved === 'guessed' && <div className="tile__badge tile__badge--ok">Got it! #{player.solvedRank}</div>}
-      {player.solved === 'gave-up' && <div className="tile__badge">Gave up</div>}
-      {!player.connected && <div className="tile__badge tile__badge--away">Reconnecting…</div>}
+      {isTurn && <div className="tile__turn">Asking</div>}
+      {player.solved === 'guessed' && <div className="stamp stamp--ok">Got it · #{player.solvedRank}</div>}
+      {player.solved === 'gave-up' && <div className="stamp stamp--muted">Gave up</div>}
+      {!player.connected && <div className="tile__away">Reconnecting…</div>}
       {faceLost && <div className="tile__hint">Can't see your face — card is pinned to the top</div>}
       {children && <div className="tile__actions">{children}</div>}
     </div>
