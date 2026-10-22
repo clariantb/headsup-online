@@ -192,6 +192,8 @@ kbd {
   border-radius: var(--r-sm);
   background: var(--surface);
   box-shadow: var(--shadow-sm);
+  color: var(--fg);
+  text-decoration: none;
   cursor: pointer;
   transition: transform 0.08s, box-shadow 0.08s;
 }
@@ -509,23 +511,15 @@ textarea {
   align-items: center;
 }
 .home__headline {
-  font-size: clamp(2.6rem, 6.2vw, 4.9rem);
+  font-size: clamp(1.9rem, 3.7vw, 3rem);
   font-weight: 800;
-  line-height: 0.95;
-  letter-spacing: -0.045em;
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  max-width: 18em;
 }
 .home__headline .hl {
-  position: relative;
   white-space: nowrap;
-  color: var(--red);
-}
-.home__headline .hl svg {
-  position: absolute;
-  left: -2%;
-  bottom: -0.14em;
-  width: 104%;
-  height: 0.3em;
-  overflow: visible;
+  color: var(--yellow);
 }
 .home__sub {
   font-size: 1.15rem;

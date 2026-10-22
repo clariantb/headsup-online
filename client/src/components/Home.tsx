@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowIcon, Mark } from './Icons.tsx';
+import { ArrowIcon, GitHubIcon, Mark } from './Icons.tsx';
 import { CardFace } from './CardFace.tsx';
 
 const DEMO_CARDS = ['Pikachu', 'Napoleon', 'Durian', 'Astronaut', 'Taylor Swift', 'Shrek', 'Capybara'];
@@ -10,6 +10,16 @@ export function Brand({ onClick }: { onClick?: () => void }) {
       <Mark />
       <span className="brand__word">Heads Up</span>
     </button>
+  );
+}
+
+export const REPO_URL = 'https://github.com/clariantb/headsup-online';
+
+export function GitHubLink() {
+  return (
+    <a className="icon-btn" href={REPO_URL} target="_blank" rel="noreferrer" aria-label="Source code on GitHub" title="Source code on GitHub">
+      <GitHubIcon />
+    </a>
   );
 }
 
@@ -96,23 +106,16 @@ export function Home({
     <div className="screen">
       <header className="bar">
         <Brand onClick={onHome} />
+        <span className="bar__spacer" />
+        <GitHubLink />
       </header>
       <main className="screen__body">
         <div className="home">
           <section>
             <h1 className="home__headline">
-              Everyone knows who you are.{' '}
-              <span className="hl">
-                Except you.
-                <svg viewBox="0 0 300 20" preserveAspectRatio="none">
-                  <path d="M4 14C60 4 120 18 180 9s90 2 116-2" fill="none" stroke="var(--fg)" strokeWidth="5" strokeLinecap="round" />
-                </svg>
-              </span>
+              Stick a card on your forehead — a celebrity, a cartoon, that photo of your cousin — and ask yes-or-no questions until
+              you work out <span className="hl">who you are.</span>
             </h1>
-            <p className="home__sub">
-              Heads Up, played over video. Your friends stick a card on your forehead — a celebrity, a cartoon, that photo of your
-              cousin — and you ask yes-or-no questions until you work out who you are.
-            </p>
             <ul className="home__facts">
               <li>2–6 players</li>
               <li>No sign-up</li>

@@ -5,7 +5,7 @@ import { poses } from '../poses.ts';
 import type { MediaPrefs, VideoSource } from '../useMedia.ts';
 import { DevicePicker } from './DevicePicker.tsx';
 import { Tile } from './Tile.tsx';
-import { Brand } from './Home.tsx';
+import { Brand, GitHubLink } from './Home.tsx';
 import { ArrowIcon, BackIcon, CamIcon, CamOffIcon, MicIcon, MicOffIcon } from './Icons.tsx';
 
 const PREVIEW_ID = '__preview';
@@ -138,6 +138,7 @@ export function PreJoin({ code, name, onJoin, onBack }: { code: string; name: st
           <span>Room</span>
           <strong>{code}</strong>
         </div>
+        <GitHubLink />
       </header>
       <main className="screen__body">
         <div className="prejoin">
